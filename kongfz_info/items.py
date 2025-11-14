@@ -5,8 +5,17 @@
 
 import scrapy
 
+# 第一阶段：分类信息Item
+class KongfzCategoryItem(scrapy.Item):
+    category_name = scrapy.Field()
+    category_url = scrapy.Field()
+    parent_category = scrapy.Field()
+    crawl_time = scrapy.Field()
 
-class KongfzInfoItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+# 第二阶段：书籍信息Item
+class KongfzBookItem(scrapy.Item):
+    book_title = scrapy.Field()
+    book_price = scrapy.Field()
+    book_url = scrapy.Field()
+    category = scrapy.Field()
+    crawl_time = scrapy.Field()
