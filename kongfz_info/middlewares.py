@@ -98,3 +98,17 @@ class KongfzInfoDownloaderMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
+
+
+# class KongfzCookieMiddleware:
+#     """孔夫子网站Cookie中间件"""
+#     def process_request(self, request, spider):
+#         # 为search.kongfz.com域名添加基础Cookie
+#         if 'search.kongfz.com' in request.url:
+#             # 添加基础Cookie
+#             request.cookies.update({
+#                 'reciever_area': '1006000000',
+#                 'kfz_uuid': '916fbf6e-8bf4-4087-82aa-3742c365adc5'
+#             })
+#
+#         return None

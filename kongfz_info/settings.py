@@ -6,7 +6,7 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-
+from random import uniform
 BOT_NAME = "kongfz_info"
 
 SPIDER_MODULES = ["kongfz_info.spiders"]
@@ -19,12 +19,14 @@ ADDONS = {}
 #USER_AGENT = "kongfz_info (+http://www.yourdomain.com)"
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 
 # Concurrency and throttling settings
-#CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS = 1
 CONCURRENT_REQUESTS_PER_DOMAIN = 1
-DOWNLOAD_DELAY = 1
+CONCURRENT_REQUESTS_PER_IP = 1   # 每个IP并发数设为1
+DOWNLOAD_DELAY = uniform(10, 20)
+RANDOMIZE_DOWNLOAD_DELAY = True  # 添加随机延迟
 
 # Disable cookies (enabled by default)
 #COOKIES_ENABLED = False
@@ -64,21 +66,22 @@ DEFAULT_REQUEST_HEADERS = {
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
    "kongfz_info.pipelines.KongfzInfoRedisPipeline": 300,
+   "kongfz_info.pipelines.CsvBookPipeline": 301,
    # "kongfz_info.pipelines.KongfzInfoMongoDBPipeline": 301,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
-#AUTOTHROTTLE_ENABLED = True
+AUTOTHROTTLE_ENABLED = True
 # The initial download delay
-#AUTOTHROTTLE_START_DELAY = 5
+AUTOTHROTTLE_START_DELAY = 2
 # The maximum download delay to be set in case of high latencies
-#AUTOTHROTTLE_MAX_DELAY = 60
+AUTOTHROTTLE_MAX_DELAY = 15
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
-#AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 # Enable showing throttling stats for every response received:
-#AUTOTHROTTLE_DEBUG = False
+AUTOTHROTTLE_DEBUG = False
 
 # Enable and configure HTTP caching (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
@@ -90,6 +93,11 @@ ITEM_PIPELINES = {
 
 # Set settings whose default value is deprecated to a future-proof value
 FEED_EXPORT_ENCODING = "utf-8"
+FEED_EXPORT_FIELDS = [
+    'title', 'author', 'press', 'quality', 'price',
+    'show_time', 'shop_name', 'img_url', 'img_big_url',
+    'book_link', 'crawl_time', 'source_url'
+]
 
 # 日志设置
 LOG_ENABLED = True
@@ -129,3 +137,5 @@ REDIS_DUPE_KEY = 'kongfz:books:dupefilter'    # 去重集合
 DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
 SCHEDULER = "scrapy_redis.scheduler.Scheduler"
 SCHEDULER_PERSIST = True  # 是否持久化调度队列
+
+MAX_PAGE = 200 # 暂定200页，也有100页的，但是很明显网页上的信息并不完整
