@@ -16,6 +16,7 @@ import time
 from datetime import datetime
 import json
 import re
+import traceback
 
 class KongfzBookInfoSpider(scrapy.Spider):
     name = "kongfz_book_info"
@@ -137,12 +138,12 @@ class KongfzBookInfoSpider(scrapy.Spider):
         max_page = self.settings.get('MAX_PAGE', 10)
         userArea = 1006000000
         cookies = {
-            'kfz_uuid': '916fbf6e-8bf4-4087-82aa-3742c365adc5',
-            'shoppingCartSessionId': 'f57e1572708ed5b61d2f150f7ddea58e',
+            'kfz_uuid': '2798a230-f396-412d-8049-371389ecd888',
+            'shoppingCartSessionId': 'd4caa63b05d834d7e31653ee39496ffd',
             'reciever_area': '1006000000',
-            'kfz-tid': 'fc6bdb2b2426fa7b773e6ee156116ff6',
-            'PHPSESSID': 'c6492f58baa5096c6f631ac076f79706b4f01d5f',
-            'kfz_trace': '916fbf6e-8bf4-4087-82aa-3742c365adc5|12048706|05dacfdc644319fa|-'
+            'kfz-tid': '035e492912fa2748ca49afa1ad88bf5e',
+            'PHPSESSID': '24ece7abfa198f87d2a18706d7f3a996f1630b02',
+            'kfz_trace': '2798a230-f396-412d-8049-371389ecd888|12048706|e113cf43d32ca932|'
         }
 
         for page in range(1, max_page + 1):
@@ -176,7 +177,9 @@ class KongfzBookInfoSpider(scrapy.Spider):
 
     def parse_book_list(self, response):
         """解析书籍列表页面的JSON数据"""
-        print(f"获取的json_data: {response.text}")
+        # print(f"获取的json_data: {response.text}")
+        # print(f"JSON keys: {list(response.text.keys())}")
+
         print(f"当前爬取的url: {response.url}")
         try:
             # 解析json响应
@@ -186,30 +189,52 @@ class KongfzBookInfoSpider(scrapy.Spider):
             if json_data.get('status') != 1:
                 self.logger.warning(f"API响应异常: {json_data.get('message', 'Unknown error')}")
                 return
+
             data = json_data.get('data', {})
             item_response = data.get('itemResponse', {})
             books = item_response.get('list', [])
             # 处理每本书籍
             for book_data in books:
-                # 创建BookItem
-                book_item = BookItem()
-                # 填充数据
-                book_item['title'] = book_data.get('title', '')
-                book_item['author'] = book_data.get('author', '')
-                book_item['press'] = book_data.get('press', '')
-                book_item['quality'] = book_data.get('quality', '')
-                book_item['price'] = book_data.get('price', '')
-                book_item['show_time'] = book_data.get('showTimeText', '')
-                book_item['shop_name'] = book_data.get('shopName', '')
-                book_item['img_url'] = book_data.get('imgUrl', '')
-                book_item['img_big_url'] = book_data.get('imgBigUrl', '')
-                book_item['book_link'] = book_data.get('link', {}).get('pc', '')
-                book_item['crawl_time'] = datetime.now().isoformat()
-                book_item['source_url'] = response.url
-                # 可选：打印信息
-                self.log_book_info(book_item)
-                yield book_item
+                try:
+                    # 检查书籍数据类型
+                    if not isinstance(book_data, dict):
+                        self.logger.warning(f"第 {i + 1} 本书籍数据不是字典类型: {type(book_data)}")
+                        continue
 
+                    # 检查showTimeText字段是否存在
+                    if 'showTimeText' not in book_data:
+                        self.logger.warning(f"第 {i+1} 本书籍缺少showTimeText字段，可用字段: {list(book_data.keys())}")
+                        # 使用默认值或跳过
+                        continue
+
+                    # 创建BookItem
+                    book_item = BookItem()
+                    # 填充数据
+                    book_item['title'] = book_data.get('title', '')
+                    book_item['author'] = book_data.get('author', '')
+                    book_item['press'] = book_data.get('press', '')
+                    book_item['quality'] = book_data.get('quality', '')
+                    book_item['price'] = book_data.get('price', '')
+
+                    # 处理showTimeText字段：移除空格和"上书"字样（如果需要）
+                    show_time_text = book_data.get('showTimeText', '')
+                    # 如果需要清理内容，可以这样做：
+                    cleaned_show_time = show_time_text.replace('上书', '').strip()
+                    book_item['show_time'] = cleaned_show_time
+
+                    book_item['shop_name'] = book_data.get('shopName', '')
+                    book_item['img_url'] = book_data.get('imgUrl', '')
+                    book_item['img_big_url'] = book_data.get('imgBigUrl', '')
+                    book_item['book_link'] = book_data.get('link', {}).get('pc', '')
+                    book_item['crawl_time'] = datetime.now().isoformat()
+                    book_item['source_url'] = response.url
+                    # 可选：打印信息
+                    self.log_book_info(book_item)
+                    yield book_item
+                except Exception as e:
+                    self.logger.error(f"处理书籍时出错: {e}")
+                    self.logger.error(traceback.format_exc())
+                    continue
         except json.JSONDecodeError as e:
             self.logger.error(f"JSON解析错误: {e}, URL: {response.url}")
         except Exception as e:
@@ -222,11 +247,15 @@ class KongfzBookInfoSpider(scrapy.Spider):
         self.logger.info(f"获取的出版社: {book_item['press']}")
         self.logger.info(f"获取的书质量: {book_item['quality']}")
         self.logger.info(f"获取的价格: {book_item['price']}")
-        self.logger.info(f"获取的上架时间: {book_item['showTimeText']}")
-        self.logger.info(f"获取的售卖书店: {book_item['shopName']}")
-        self.logger.info(f"获取的图片: {book_item['imgUrl']}")
-        self.logger.info(f"获取的大图片: {book_item['imgBigUrl']}")
-        self.logger.info(f"获取的图书链接: {book_item['link']['pc']}")
+        self.logger.info(f"获取的上架时间: {book_item['show_time']}")
+        self.logger.info(f"获取的售卖书店: {book_item['shop_name']}")
+        self.logger.info(f"获取的图片: {book_item['img_url']}")
+        self.logger.info(f"获取的大图片: {book_item['img_big_url']}")
+
+        self.logger.info(f"获取的图书链接: {book_item['book_link']}")
+        self.logger.info(f"获取的图书链接: {book_item['crawl_time']}")
+        self.logger.info(f"获取的图书链接: {book_item['source_url']}")
+
 
     def closed(self, reason):
         """爬虫关闭时的处理"""

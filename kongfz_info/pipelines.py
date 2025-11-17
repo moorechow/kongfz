@@ -185,7 +185,7 @@ class CsvBookPipeline:
         filename = f'data/kongfzbooks_{spider.name}_{timestamp}.csv'
 
         # 创建CSV文件
-        csv_file = open(filename, 'w', newline='', encoding='utf-8')
+        csv_file = open(filename, 'wb')
         self.files[spider] = csv_file
 
         # 创建CSV导出器
