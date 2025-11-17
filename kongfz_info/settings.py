@@ -52,9 +52,9 @@ DEFAULT_REQUEST_HEADERS = {
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    "kongfz_info.middlewares.KongfzInfoDownloaderMiddleware": 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+   "kongfz_info.middlewares.KongfzLoginMiddleware": 543,
+}
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -102,7 +102,7 @@ FEED_EXPORT_FIELDS = [
 # 日志设置
 LOG_ENABLED = True
 # LOG_ENCODING = 'utf-8'
-LOG_LEVEL = 'WARNING'           # 日志级别：DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_LEVEL = 'DEBUG'           # 日志级别：DEBUG, INFO, WARNING, ERROR, CRITICAL
 # LOG_FORMAT = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
 # LOG_DATEFORMAT = '%Y-%m-%d %H:%M:%S'
 # LOG_STDOUT = False
@@ -139,3 +139,6 @@ SCHEDULER = "scrapy_redis.scheduler.Scheduler"
 SCHEDULER_PERSIST = True  # 是否持久化调度队列
 
 MAX_PAGE = 200 # 暂定200页，也有100页的，但是很明显网页上的信息并不完整
+
+KONGFZ_USERNAME = 'moore0411'
+KONGFZ_PASSWORD = 'YqddWP53L7U.2NU'

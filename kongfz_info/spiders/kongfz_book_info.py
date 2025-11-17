@@ -12,6 +12,7 @@ from scrapy.http import HtmlResponse,Request
 from scrapy.exceptions import CloseSpider
 from urllib.parse import urlencode
 from kongfz_info.items import MainCategoryItem, BookItem
+from kongfz_info.middlewares import KongfzLoginMiddleware
 import time
 from datetime import datetime
 import json
@@ -25,13 +26,37 @@ class KongfzBookInfoSpider(scrapy.Spider):
         super(KongfzBookInfoSpider, self).__init__(*args, **kwargs)
         self.start_urls = ["https://www.kongfz.com/"]
         self.api_base = "https://search.kongfz.com/pc-gw/search-web/client/pc/product/category/list"
+        self.login_middleware = None
+        self.valid_cookies = None
 
     def start_requests(self):
+        # 在start_requests中初始化登录中间件
+        self.login_middleware = KongfzLoginMiddleware(
+            username=self.settings.get('KONGFZ_USERNAME'),
+            password=self.settings.get('KONGFZ_PASSWORD')
+        )
+
+        """先登录获取cookies"""
+        self.logger.info("开始登录过程...")
+        cookies = self.login_middleware.get_valid_cookies()
+
+        if cookies:
+            # 将cookies转换为字典格式
+            self.valid_cookies = {}
+            for cookie in cookies:
+                self.valid_cookies[cookie['name']] = cookie['value']
+
+            self.logger.info("登录成功，开始爬取...")
+        else:
+            self.logger.error("登录失败，无法继续爬取")
+            return
+
         """重写start_requests以添加自定义headers"""
         for url in self.start_urls:
             yield Request(
                 url=url,
                 callback=self.parse,
+                cookies=self.valid_cookies,
                 headers={
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                     'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
@@ -137,14 +162,6 @@ class KongfzBookInfoSpider(scrapy.Spider):
 
         max_page = self.settings.get('MAX_PAGE', 10)
         userArea = 1006000000
-        cookies = {
-            'kfz_uuid': '2798a230-f396-412d-8049-371389ecd888',
-            'shoppingCartSessionId': 'd4caa63b05d834d7e31653ee39496ffd',
-            'reciever_area': '1006000000',
-            'kfz-tid': '035e492912fa2748ca49afa1ad88bf5e',
-            'PHPSESSID': '24ece7abfa198f87d2a18706d7f3a996f1630b02',
-            'kfz_trace': '2798a230-f396-412d-8049-371389ecd888|12048706|e113cf43d32ca932|'
-        }
 
         for page in range(1, max_page + 1):
             time.sleep(2)  # 等待2秒
@@ -153,7 +170,7 @@ class KongfzBookInfoSpider(scrapy.Spider):
             yield Request(
                 url = api_url,
                 callback = self.parse_book_list,
-                cookies = cookies,
+                cookies = self.valid_cookies,
                 headers = {
                     'Accept': 'application/json, text/javascript, */*; q=0.01',
                     'Accept-Language': 'zh-CN,zh;q=0.9',
