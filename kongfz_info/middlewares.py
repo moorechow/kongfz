@@ -2,6 +2,7 @@
 #
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+from time import sleep
 
 from scrapy import signals
 
@@ -171,7 +172,8 @@ class KongfzLoginMiddleware:
         options.add_argument('--disable-extensions')
         options.add_argument('--disable-notifications')
 
-        return webdriver.Chrome(options=options)
+        # return webdriver.Chrome(options=options)
+        return webdriver.Chrome()
 
     def load_cookies(self):
         """加载已保存的cookies"""
@@ -189,16 +191,17 @@ class KongfzLoginMiddleware:
         """使用Selenium模拟登录（直接访问登录页面）"""
         login_url = 'https://login.kongfz.com/Pc/Login/iframe?returnUrl=https://www.kongfz.com/'
         self.driver = self.get_driver()
+        print('尝试启动chrome浏览器是否成功....', self.driver)
 
         try:
+
             # 直接访问登录页面
             self.driver.get(login_url)
             self.logger.info(f"已访问登录页面: {login_url}")
+            print('尝试启动chrome浏览器是否成功....')
 
             # 等待页面加载完成
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             self.logger.info("登录页面加载完成")
 
             # 检查是否需要处理iframe
@@ -209,12 +212,12 @@ class KongfzLoginMiddleware:
 
             # 等待登录表单元素加载
             WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.ID, "loginName"))
+                EC.presence_of_element_located((By.ID, "username"))
             )
             self.logger.info("登录表单已加载")
 
             # 输入用户名
-            username_input = self.driver.find_element(By.ID, 'loginName')
+            username_input = self.driver.find_element(By.ID, "username")
             username_input.clear()
             username_input.send_keys(self.username)
             self.logger.info("已输入用户名")
@@ -229,8 +232,15 @@ class KongfzLoginMiddleware:
             login_button = self.find_login_button()
             if login_button:
                 # 先滚动到按钮可见
-                self.driver.execute_script("arguments[0].scrollIntoView();", login_button)
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", login_button)
                 time.sleep(1)
+
+                # 确保按钮可点击
+                WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "input.login_submit"))
+                )
+
+                time.sleep(0.5)
 
                 # 尝试多种点击方式
                 try:
@@ -246,10 +256,10 @@ class KongfzLoginMiddleware:
 
             # 等待登录完成 - 检查是否跳转到首页
             success = self.wait_for_login_success()
-
             if success:
                 # 获取cookies
                 cookies = self.driver.get_cookies()
+                # print("cookie内容：", cookies)
                 self.save_cookies(cookies)
                 self.logger.info(f"登录成功！获取到 {len(cookies)} 个cookies")
 
@@ -344,10 +354,10 @@ class KongfzLoginMiddleware:
             WebDriverWait(self.driver, timeout).until(
                 lambda driver: (
                     # 登录框消失
-                        len(driver.find_elements(By.ID, "loginBox")) == 0 or
+                        len(driver.find_elements(By.ID, "login")) == 0 or
                         # 或者用户信息出现
-                        len(driver.find_elements(By.CLASS_NAME, "user-info")) > 0 or
-                        len(driver.find_elements(By.CLASS_NAME, "user-name")) > 0 or
+                        len(driver.find_elements(By.CLASS_NAME, "username")) > 0 or
+                        len(driver.find_elements(By.CLASS_NAME, "password")) > 0 or
                         # 检查URL变化（如果有）
                         "login" not in driver.current_url
                 )
@@ -363,7 +373,7 @@ class KongfzLoginMiddleware:
         cookies = self.load_cookies()
         if cookies and self.verify_cookies(cookies):
             return cookies
-
+        self.logger.info("准备启动chrome.....")
         # 如果cookies无效，重新登录
         return self.login_with_selenium()
 
@@ -436,3 +446,5 @@ class KongfzLoginMiddleware:
         except Exception as e:
             self.logger.error(f"验证登录状态时出错: {str(e)}")
             return False
+
+

@@ -39,6 +39,9 @@ class KongfzBookInfoSpider(scrapy.Spider):
         """先登录获取cookies"""
         self.logger.info("开始登录过程...")
         cookies = self.login_middleware.get_valid_cookies()
+        print("cookie 内容有哪些:", cookies)
+
+
 
         if cookies:
             # 将cookies转换为字典格式
